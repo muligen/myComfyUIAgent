@@ -1,7 +1,7 @@
-import os
+import time
 from functools import wraps
 from flask import Blueprint, jsonify, request, send_file
-from .service import execute_workflow, upload_picture, get_video_list, get_workflow_list, get_workflow_content
+from .service import execute_workflow, upload_picture, get_video_list, get_workflow_list, get_workflow_content, execute_task, get_history
 
 comfyui_bp = Blueprint('comfyui', __name__)
 
@@ -160,6 +160,72 @@ def get_workflow_by_name_route(filename):
         return jsonify({"error": str(e)}), 404
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+
+@comfyui_bp.route("/tasks", methods=["POST"])
+@ip_restricted
+def create_task():
+    """根据提供的工作流数据触发ComfyUI任务"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body is required"}), 400
+
+        # 检查是否包含工作流数据
+        if "params" not in data:
+            return jsonify({"error": "params field is required"}), 400
+
+        workflow_data = data["params"]
+
+        # 可选：检查是否包含client_id（用于WebSocket推送）
+        client_id = data.get("client_id")
+
+        # 执行任务
+        result = execute_task(workflow_data)
+        print("Executing task result:", result)
+
+        if result:
+            response_data = {
+                "status": "success",
+                "task_id": result.get("prompt_id"),
+                "queue_position": result.get("number", -1),
+                "node_errors": result.get("node_errors", {}),
+                "estimated_time": time.time()
+            }
+
+            # 如果提供了client_id，添加到响应中
+            if client_id:
+                response_data["client_id"] = client_id
+
+            return jsonify(response_data), 200
+        else:
+            return jsonify({"error": "Failed to create task"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+
+@comfyui_bp.route("/history", methods=["GET"])
+@ip_restricted
+def get_history_route():
+    """获取ComfyUI的历史记录"""
+    try:
+        history = get_history()
+
+        if history is not None:
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "History retrieved successfully",
+                    "data": history
+                }
+            ), 200
+        else:
+            return jsonify({"error": "Failed to retrieve history"}), 500
+
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 

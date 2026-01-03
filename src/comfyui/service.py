@@ -1,11 +1,13 @@
 import json
 import os
+
+import requests
 from flask import send_file
 from werkzeug.utils import secure_filename
-import requests
 
 # ComfyUI服务配置
 COMFYUI_URL = "http://127.0.0.1:8000/prompt"
+COMFYUI_HISTORY_URL = "http://127.0.0.1:8000/history"
 COMFYUI_WORKSPACE = r"E:\AIDraw\comfyUI"
 FLOW_FILE_DIR = r"D:\desktop\comfyui_agent\flow_file"  # 工作流文件目录
 
@@ -37,6 +39,25 @@ def execute_workflow(flow_file: str):
         return None
 
 
+def execute_task(workflow_data: dict):
+    """根据提供的工作流数据执行ComfyUI任务"""
+    # 构造请求体
+    payload = {"prompt": workflow_data}
+
+    # 发送POST请求到ComfyUI
+    response = requests.post(COMFYUI_URL, json=payload)
+
+    # 处理响应
+    if response.status_code == 200:
+        result = response.json()
+        print("任务执行成功，任务ID：", result.get("prompt_id"))
+        return result
+    else:
+        print("任务执行失败，状态码：", response.status_code)
+        print("错误信息：", response.text)
+        return None
+
+
 def upload_picture(file):
     """上传图片到ComfyUI input目录"""
     # 检查是否为图片文件
@@ -55,10 +76,7 @@ def upload_picture(file):
     file_path = os.path.join(input_dir, filename)
     file.save(file_path)
 
-    return {
-        "filename": filename,
-        "file_path": file_path
-    }
+    return {"filename": filename, "file_path": file_path}
 
 
 def get_video_list():
@@ -70,7 +88,7 @@ def get_video_list():
         return []
 
     # 获取所有视频文件
-    video_extensions = {'.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.gif'}
+    video_extensions = {".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv", ".gif"}
     video_files = []
 
     for filename in os.listdir(output_dir):
@@ -95,11 +113,11 @@ def get_video_file(video_path: str):
     # 安全检查：确保路径在允许的目录内
     allowed_dirs = [
         os.path.join(COMFYUI_WORKSPACE, "output"),
-        os.path.join(COMFYUI_WORKSPACE, "output", "video"),
-        os.path.join(COMFYUI_WORKSPACE, "input")
+        os.path.join(COMFYUI_WORKSPACE, "input"),
     ]
 
     # 规范化路径
+    video_path = os.path.join(COMFYUI_WORKSPACE, "output", video_path)
     video_path = os.path.normpath(video_path)
 
     # 检查路径是否在允许的目录内
@@ -122,11 +140,13 @@ def get_video_file(video_path: str):
         return {"error": "Path is not a file"}, 400
 
     # 检查是否为视频文件
-    video_extensions = {'.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.gif'}
+    video_extensions = {".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv", ".gif"}
     file_ext = os.path.splitext(video_path)[1].lower()
 
     if file_ext not in video_extensions:
-        return {"error": f"File type not allowed. Allowed types: {video_extensions}"}, 400
+        return {
+            "error": f"File type not allowed. Allowed types: {video_extensions}"
+        }, 400
 
     # 流式返回视频文件
     return send_file(
@@ -134,7 +154,7 @@ def get_video_file(video_path: str):
         as_attachment=False,  # 不作为附件，直接在浏览器中播放
         mimetype=None,  # 让Flask自动检测MIME类型
         conditional=True,  # 支持范围请求（断点续传）
-        download_name=os.path.basename(video_path)  # 设置下载文件名
+        download_name=os.path.basename(video_path),  # 设置下载文件名
     )
 
 
@@ -148,7 +168,7 @@ def get_workflow_list():
     workflow_files = []
     for filename in os.listdir(FLOW_FILE_DIR):
         file_path = os.path.join(FLOW_FILE_DIR, filename)
-        if os.path.isfile(file_path) and filename.endswith('.json'):
+        if os.path.isfile(file_path) and filename.endswith(".json"):
             workflow_files.append(filename)
 
     return workflow_files
@@ -157,7 +177,7 @@ def get_workflow_list():
 def get_workflow_content(filename: str):
     """根据文件名读取工作流文件内容"""
     # 安全检查：确保文件名只包含合法字符
-    if not filename or '..' in filename or '/' in filename or '\\' in filename:
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
         raise ValueError("Invalid filename")
 
     # 构建文件路径
@@ -168,15 +188,32 @@ def get_workflow_content(filename: str):
         raise FileNotFoundError(f"Workflow file not found: {filename}")
 
     # 检查是否为JSON文件
-    if not filename.endswith('.json'):
+    if not filename.endswith(".json"):
         raise ValueError("File must be a JSON file")
 
     # 读取文件内容
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = json.load(f)
 
-    return {
-        "filename": filename,
-        "file_path": file_path,
-        "content": content
-    }
+    return {"filename": filename, "file_path": file_path, "content": content}
+
+
+def get_history():
+    """获取ComfyUI的历史记录"""
+    try:
+        # 发送GET请求到ComfyUI history接口
+        response = requests.get(COMFYUI_HISTORY_URL)
+
+        # 处理响应
+        if response.status_code == 200:
+            history = response.json()
+            print("获取历史记录成功")
+            return history
+        else:
+            print("获取历史记录失败，状态码：", response.status_code)
+            print("错误信息：", response.text)
+            return None
+
+    except Exception as e:
+        print("获取历史记录异常：", str(e))
+        return None
