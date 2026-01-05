@@ -1,9 +1,19 @@
 import time
 from functools import wraps
-from flask import Blueprint, jsonify, request, send_file
-from .service import execute_workflow, upload_picture, get_video_list, get_workflow_list, get_workflow_content, execute_task, get_history
 
-comfyui_bp = Blueprint('comfyui', __name__)
+from flask import Blueprint, jsonify, request, send_file
+
+from .service import (
+    execute_task,
+    execute_workflow,
+    get_history,
+    get_video_list,
+    get_workflow_content,
+    get_workflow_list,
+    upload_picture_single,
+)
+
+comfyui_bp = Blueprint("comfyui", __name__)
 
 # 允许的IP地址
 ALLOWED_IP = "8.148.242.1"
@@ -11,20 +21,24 @@ ALLOWED_IP = "8.148.242.1"
 
 def ip_restricted(f):
     """IP访问限制装饰器"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # 获取客户端真实IP
-        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR',
-                                       request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
+        client_ip = request.environ.get(
+            "HTTP_X_FORWARDED_FOR",
+            request.environ.get("HTTP_X_REAL_IP", request.remote_addr),
+        )
 
         # 如果是通过代理访问，可能包含多个IP，取第一个
-        if ',' in client_ip:
-            client_ip = client_ip.split(',')[0].strip()
+        if "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
 
         # if client_ip != ALLOWED_IP:
         #     return jsonify({'error': 'Access denied: IP not allowed'}), 403
 
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -56,34 +70,6 @@ def execute_flow():
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
-@comfyui_bp.route("/upload_pic", methods=["POST"])
-@ip_restricted
-def upload_picture_route():
-    """上传图片到ComfyUI工作目录"""
-    try:
-        if "file" not in request.files:
-            return jsonify({"error": "No file provided"}), 400
-
-        file = request.files["file"]
-
-        if file.filename == "":
-            return jsonify({"error": "No file selected"}), 400
-
-        result = upload_picture(file)
-
-        return jsonify(
-            {
-                "success": True,
-                "message": "File uploaded successfully",
-                "filename": result["filename"],
-                "file_path": result["file_path"],
-            }
-        ), 200
-
-    except Exception as e:
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-
 @comfyui_bp.route("/videos", methods=["GET"])
 @ip_restricted
 def get_videos_route():
@@ -110,7 +96,7 @@ def get_video_route():
     from .service import get_video_file
 
     try:
-        video_path = request.args.get('video_path')
+        video_path = request.args.get("video_path")
 
         if not video_path:
             return jsonify({"error": "video_path parameter is required"}), 400
@@ -193,7 +179,7 @@ def create_task():
                 "task_id": result.get("prompt_id"),
                 "queue_position": result.get("number", -1),
                 "node_errors": result.get("node_errors", {}),
-                "estimated_time": time.time()
+                "estimated_time": time.time(),
             }
 
             # 如果提供了client_id，添加到响应中
@@ -220,7 +206,7 @@ def get_history_route():
                 {
                     "status": "success",
                     "message": "History retrieved successfully",
-                    "data": history
+                    "data": history,
                 }
             ), 200
         else:
@@ -228,4 +214,40 @@ def get_history_route():
 
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+
+@comfyui_bp.route("/resource/pics/upload", methods=["POST"])
+@ip_restricted
+def upload_picture_resource():
+    """上传图片到ComfyUI input目录（单文件上传）"""
+    try:
+        # 检查是否有文件被上传
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+
+        # 调用单文件上传服务
+        result = upload_picture_single(file)
+
+        return jsonify(
+            {
+                "status": "success",
+                "message": "Picture uploaded successfully",
+                "data": {
+                    "filename": result["filename"],
+                    "file_path": result["file_path"],
+                    "size": result["size"],
+                },
+            }
+        ), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
 

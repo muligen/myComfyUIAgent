@@ -79,6 +79,78 @@ def upload_picture(file):
     return {"filename": filename, "file_path": file_path}
 
 
+def upload_pictures(files):
+    """上传多张图片到ComfyUI input目录"""
+    uploaded_files = []
+    errors = []
+
+    # 创建目标目录
+    input_dir = os.path.join(COMFYUI_WORKSPACE, "input")
+    os.makedirs(input_dir, exist_ok=True)
+
+    for file in files:
+        try:
+            # 检查是否为图片文件
+            allowed_extensions = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
+            filename = secure_filename(file.filename)
+            file_ext = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+
+            if file_ext not in allowed_extensions:
+                errors.append({
+                    "filename": file.filename,
+                    "error": f"File type not allowed. Allowed types: {allowed_extensions}"
+                })
+                continue
+
+            # 保存文件
+            file_path = os.path.join(input_dir, filename)
+            file.save(file_path)
+
+            uploaded_files.append({
+                "filename": filename,
+                "file_path": file_path,
+                "size": os.path.getsize(file_path)
+            })
+
+        except Exception as e:
+            errors.append({
+                "filename": file.filename,
+                "error": str(e)
+            })
+
+    return {
+        "uploaded": uploaded_files,
+        "errors": errors,
+        "total": len(uploaded_files),
+        "failed": len(errors)
+    }
+
+
+def upload_picture_single(file):
+    """上传单张图片到ComfyUI input目录"""
+    # 检查是否为图片文件
+    allowed_extensions = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
+    filename = secure_filename(file.filename)
+    file_ext = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+
+    if file_ext not in allowed_extensions:
+        raise ValueError(f"File type not allowed. Allowed types: {allowed_extensions}")
+
+    # 创建目标目录
+    input_dir = os.path.join(COMFYUI_WORKSPACE, "input")
+    os.makedirs(input_dir, exist_ok=True)
+
+    # 保存文件
+    file_path = os.path.join(input_dir, filename)
+    file.save(file_path)
+
+    return {
+        "filename": filename,
+        "file_path": file_path,
+        "size": os.path.getsize(file_path)
+    }
+
+
 def get_video_list():
     """获取output目录下所有视频文件"""
     output_dir = os.path.join(COMFYUI_WORKSPACE, "output", "video")
