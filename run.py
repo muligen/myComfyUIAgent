@@ -7,11 +7,6 @@ from flask import Flask
 from src.comfyui import comfyui_bp
 
 app = Flask(__name__)
-COMFYUI_WORKSPACE = r"E:\AIDraw\comfyUI"
-COMFYUI_INPUT = r"E:\AIDraw\comfyUI\input"
-COMFYUI_INPUT_THUMB = r"E:\AIDraw\comfyUI\input\thumbnails"
-COMFYUI_OUTPUT = r"E:\AIDraw\comfyUI\output"
-COMFYUI_OUTPUT_THUMB = r"E:\AIDraw\comfyUI\output\thumbnails"
 
 # 注册ComfyUI蓝图
 app.register_blueprint(comfyui_bp, url_prefix="/comfyui")
@@ -27,15 +22,15 @@ def start_thumbnail_generator():
         [sys.executable, "-m", "src.thumbnail_generator"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
     # 定义一个函数在后台读取子进程输出
     def log_subprocess_output():
         for line in process.stdout:
-            print(f"[缩略图生成器] {line}", end='')
+            print(f"[缩略图生成器] {line}", end="")
         for line in process.stderr:
-            print(f"[缩略图生成器错误] {line}", end='')
+            print(f"[缩略图生成器错误] {line}", end="")
 
     # 启动线程读取输出
     log_thread = threading.Thread(target=log_subprocess_output, daemon=True)

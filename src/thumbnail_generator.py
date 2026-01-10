@@ -231,9 +231,9 @@ def main():
     """主函数"""
     # 配置路径
     COMFYUI_INPUT = r"E:\AIDraw\comfyUI\input"
-    COMFYUI_OUTPUT = r"E:\AIDraw\comfyUI\output"
+    COMFYUI_OUTPUT = r"E:\AIDraw\comfyUI\output\video"
     COMFYUI_INPUT_THUMB = r"E:\AIDraw\comfyUI\input\thumbnails"
-    COMFYUI_OUTPUT_THUMB = r"E:\AIDraw\comfyUI\output\thumbnails"
+    COMFYUI_OUTPUT_THUMB = r"E:\AIDraw\comfyUI\output\video\thumbnails"
 
     # 创建并启动生成器
     generator = ThumbnailGenerator(

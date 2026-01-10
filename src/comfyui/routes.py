@@ -89,7 +89,7 @@ def get_videos_route():
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
-@comfyui_bp.route("/get_video", methods=["GET"])
+@comfyui_bp.route("/video", methods=["GET"])
 @ip_restricted
 def get_video_route():
     """流式返回视频文件"""
