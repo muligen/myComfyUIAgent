@@ -289,3 +289,54 @@ def get_history():
     except Exception as e:
         print("获取历史记录异常：", str(e))
         return None
+
+
+def get_thumbnail_file(thumbnail_path: str):
+    """直接返回缩略图文件"""
+    # 安全检查：确保路径在允许的目录内
+    allowed_dirs = [
+        os.path.join(COMFYUI_WORKSPACE, "output"),
+        os.path.join(COMFYUI_WORKSPACE, "output", "video"),
+        os.path.join(COMFYUI_WORKSPACE, "input"),
+    ]
+
+    # 如果是相对路径，则在output目录下查找
+    if not os.path.isabs(thumbnail_path):
+        thumbnail_path = os.path.join(COMFYUI_WORKSPACE, "output", thumbnail_path)
+
+    # 规范化路径
+    thumbnail_path = os.path.normpath(thumbnail_path)
+
+    # 检查路径是否在允许的目录内
+    is_allowed = False
+    for allowed_dir in allowed_dirs:
+        allowed_dir = os.path.normpath(allowed_dir)
+        if thumbnail_path.startswith(allowed_dir):
+            is_allowed = True
+            break
+
+    if not is_allowed:
+        return {"error": "Access denied: path not allowed"}, 403
+
+    # 检查文件是否存在
+    if not os.path.exists(thumbnail_path):
+        return {"error": f"Thumbnail file not found: {thumbnail_path}"}, 404
+
+    # 检查是否为文件
+    if not os.path.isfile(thumbnail_path):
+        return {"error": "Path is not a file"}, 400
+
+    # 检查是否为图片文件
+    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'}
+    file_ext = os.path.splitext(thumbnail_path)[1].lower()
+
+    if file_ext not in image_extensions:
+        return {"error": f"File type not allowed. Allowed types: {image_extensions}"}, 400
+
+    # 直接返回图片文件（不使用流式传输，适合小文件）
+    return send_file(
+        thumbnail_path,
+        mimetype=None,  # 让Flask自动检测MIME类型
+        as_attachment=False,  # 不作为附件，直接在浏览器中显示
+        download_name=os.path.basename(thumbnail_path)  # 设置文件名
+    )

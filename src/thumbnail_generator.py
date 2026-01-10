@@ -52,8 +52,8 @@ class ThumbnailGenerator:
         }
 
         # 缩略图尺寸
-        self.thumbnail_size = "200x200"  # 视频缩略图尺寸
-        self.thumbnail_quality = 85  # 图片质量
+        self.thumbnail_size = "800x800"  # 视频缩略图尺寸
+        self.thumbnail_quality = 180  # 图片质量
 
     def _is_media_file(self, file_path: Path) -> bool:
         """检查是否是媒体文件"""

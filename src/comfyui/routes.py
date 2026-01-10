@@ -11,6 +11,7 @@ from .service import (
     get_workflow_content,
     get_workflow_list,
     upload_picture_single,
+    get_thumbnail_file,
 )
 
 comfyui_bp = Blueprint("comfyui", __name__)
@@ -102,6 +103,21 @@ def get_video_route():
             return jsonify({"error": "video_path parameter is required"}), 400
 
         return get_video_file(video_path)
+
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+@comfyui_bp.route("/thumbnail", methods=["GET"])
+@ip_restricted
+def get_thumbnail_route():
+    """流式返回缩略图文件"""
+    try:
+        thumbnail_path = request.args.get("thumbnail_path")
+
+        if not thumbnail_path:
+            return jsonify({"error": "thumbnail_path parameter is required"}), 400
+
+        return get_thumbnail_file(thumbnail_path)
 
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
@@ -249,5 +265,3 @@ def upload_picture_resource():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-
