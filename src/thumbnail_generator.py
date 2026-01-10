@@ -2,23 +2,31 @@
 缩略图生成器子进程
 监控 COMFYUI_INPUT 和 COMFYUI_OUTPUT 文件夹，为新文件生成缩略图
 """
+
 import os
-import time
 import subprocess
 import threading
+import time
 from pathlib import Path
-from typing import Set, Dict
+from typing import Dict, Set
+
+FFMPEG_PATH = r"D:\xiezuo\resources\ffmpeg\ffmpeg.exe"
 
 
 class ThumbnailGenerator:
     """缩略图生成器"""
 
     # 支持的图片和视频格式
-    IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'}
-    VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v'}
+    IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff"}
+    VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".m4v"}
 
-    def __init__(self, input_dir: str, output_dir: str,
-                 input_thumb_dir: str, output_thumb_dir: str):
+    def __init__(
+        self,
+        input_dir: str,
+        output_dir: str,
+        input_thumb_dir: str,
+        output_thumb_dir: str,
+    ):
         """
         初始化缩略图生成器
 
@@ -40,7 +48,7 @@ class ThumbnailGenerator:
         # 记录已处理的文件
         self.processed_files: Dict[str, Set[str]] = {
             str(self.input_dir): set(),
-            str(self.output_dir): set()
+            str(self.output_dir): set(),
         }
 
         # 缩略图尺寸
@@ -49,8 +57,10 @@ class ThumbnailGenerator:
 
     def _is_media_file(self, file_path: Path) -> bool:
         """检查是否是媒体文件"""
-        return (file_path.suffix.lower() in self.IMAGE_EXTENSIONS or
-                file_path.suffix.lower() in self.VIDEO_EXTENSIONS)
+        return (
+            file_path.suffix.lower() in self.IMAGE_EXTENSIONS
+            or file_path.suffix.lower() in self.VIDEO_EXTENSIONS
+        )
 
     def _generate_image_thumbnail(self, input_path: Path, output_path: Path) -> bool:
         """
@@ -66,18 +76,18 @@ class ThumbnailGenerator:
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             cmd = [
-                r'D:\xiezuo\resources\ffmpeg\ffmpeg.exe',
-                '-i', str(input_path),
-                '-vf', f'scale={self.thumbnail_size}:force_original_aspect_ratio=decrease',
-                '-q:v', str(self.thumbnail_quality),
-                '-y',  # 覆盖已存在的文件
-                str(output_path)
+                FFMPEG_PATH,
+                "-i",
+                str(input_path),
+                "-vf",
+                f"scale={self.thumbnail_size}:force_original_aspect_ratio=decrease",
+                "-q:v",
+                str(self.thumbnail_quality),
+                "-y",  # 覆盖已存在的文件
+                str(output_path),
             ]
             result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=10
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10
             )
             return result.returncode == 0
         except Exception as e:
@@ -99,20 +109,22 @@ class ThumbnailGenerator:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             # 提取视频第一帧并缩放
             cmd = [
-                r'D:\xiezuo\resources\ffmpeg\ffmpeg.exe',
-                '-i', str(input_path),
-                '-ss', '00:00:00',  # 从开始位置
-                '-vframes', '1',  # 只提取一帧
-                '-vf', f'scale={self.thumbnail_size}:force_original_aspect_ratio=decrease',
-                '-q:v', str(self.thumbnail_quality),
-                '-y',  # 覆盖已存在的文件
-                str(output_path)
+                FFMPEG_PATH,
+                "-i",
+                str(input_path),
+                "-ss",
+                "00:00:00",  # 从开始位置
+                "-vframes",
+                "1",  # 只提取一帧
+                "-vf",
+                f"scale={self.thumbnail_size}:force_original_aspect_ratio=decrease",
+                "-q:v",
+                str(self.thumbnail_quality),
+                "-y",  # 覆盖已存在的文件
+                str(output_path),
             ]
             result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=30
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30
             )
             return result.returncode == 0
         except Exception as e:
@@ -228,7 +240,7 @@ def main():
         input_dir=COMFYUI_INPUT,
         output_dir=COMFYUI_OUTPUT,
         input_thumb_dir=COMFYUI_INPUT_THUMB,
-        output_thumb_dir=COMFYUI_OUTPUT_THUMB
+        output_thumb_dir=COMFYUI_OUTPUT_THUMB,
     )
 
     generator.start(check_interval=5)
